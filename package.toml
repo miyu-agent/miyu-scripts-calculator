@@ -1,0 +1,6 @@
+[package]
+version = "0.1.0"
+name = { en = "Calculator", zh = "计算器" }
+summary = { en = "Exact arithmetic, trig, logs, factorials and combinatorics", zh = "四则、乘方、三角、对数、阶乘、组合数，整数照精确值算" }
+author = "SHORiN-KiWATA"
+icon = "chart-bar"
