@@ -85,6 +85,9 @@ def make_functions(degrees):
 
     def rounded(x, digits=0):
         # 四舍五入（.5 远离零），不是 Python 的银行家舍入
+        # 浮点数的指数在 ±308 以内，位数再多舍入不出别的结果，先拦下，免得算巨大的 10 的幂
+        if abs(digits) > 308:
+            raise Failure("round 的位数要在 -308 到 308 之间")
         factor = 10 ** int(digits)
         value = math.floor(abs(x) * factor + 0.5) / factor
         value = math.copysign(value, x)
@@ -97,6 +100,29 @@ def make_functions(degrees):
             raise Failure(f"阶乘只算到 {MAX_FACTORIAL}!")
         return math.factorial(int(n))
 
+    def comb(n, k):
+        if isinstance(n, int) and isinstance(k, int) and 0 <= k <= n:
+            m = min(k, n - k)
+            # C(n, m) ≥ (n/m)^m：下界就超了上限的，不去算
+            if m > 0 and m * (math.log2(n) - math.log2(m)) > MAX_INT_BITS:
+                raise Failure("结果太大（超过约 3 万位）")
+        return math.comb(n, k)
+
+    def perm(n, k=None):
+        if isinstance(n, int) and n >= 0 and (k is None or isinstance(k, int) and 0 <= k <= n):
+            m = min(n if k is None else k, n // 2)
+            # 前 m 个因子都大于 n/2，P(n, k) > (n/2)^m：下界就超了上限的，不去算
+            if m > 0 and m * (math.log2(n) - 1) > MAX_INT_BITS:
+                raise Failure("结果太大（超过约 3 万位）")
+        return math.perm(n, k)
+
+    def lcm(*values):
+        # 两两累乘着算、每步查位数：参数都在上限内，每一步的结果至多两倍上限
+        result = 1
+        for value in values:
+            result = check_int(math.lcm(result, value))
+        return result
+
     return {
         "sin": lambda x: math.sin(to_rad(x)), "cos": lambda x: math.cos(to_rad(x)),
         "tan": lambda x: math.tan(to_rad(x)),
@@ -107,7 +133,7 @@ def make_functions(degrees):
         "cbrt": lambda x: math.copysign(abs(x) ** (1 / 3), x),
         "abs": abs, "ln": math.log, "log": log, "log2": math.log2, "log10": math.log10,
         "exp": math.exp, "floor": math.floor, "ceil": math.ceil, "round": rounded, "trunc": math.trunc,
-        "factorial": factorial, "gcd": math.gcd, "lcm": math.lcm, "comb": math.comb, "perm": math.perm,
+        "factorial": factorial, "gcd": math.gcd, "lcm": lcm, "comb": comb, "perm": perm,
         "min": min, "max": max, "hypot": math.hypot, "degrees": math.degrees, "radians": math.radians,
     }
 
@@ -197,6 +223,9 @@ def main():
         print(f"错误：参数不是 JSON 对象：{exc}")
         sys.exit(1)
     reject_unknown(args)
+    # 整数结果已由 MAX_INT_BITS 限住（约 3 万位），用不着 Python 的 4300 位转换上限
+    if hasattr(sys, "set_int_max_str_digits"):
+        sys.set_int_max_str_digits(0)
     expression = args.get("expression")
     if not isinstance(expression, str) or not expression.strip():
         print("错误：expression 要写，例如 \"sqrt(2) * sin(pi/4)\"")
@@ -204,7 +233,11 @@ def main():
     if len(expression) > MAX_EXPRESSION:
         print(f"错误：算式太长，上限 {MAX_EXPRESSION} 字")
         sys.exit(1)
-    functions = make_functions(args.get("angle") == "deg")
+    angle = args.get("angle")
+    if angle not in (None, "rad", "deg"):
+        print("错误：angle 只能是 rad（弧度）或 deg（角度）")
+        sys.exit(1)
+    functions = make_functions(angle == "deg")
     parts = [p for p in expression.replace("\n", ";").split(";") if p.strip()]
     lines, failed = [], False
     for part in parts:
