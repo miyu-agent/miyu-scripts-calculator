@@ -217,10 +217,11 @@ def reject_unknown(args):
 def main():
     try:
         args = json.load(sys.stdin)
-        if not isinstance(args, dict):
-            raise ValueError("要一个 JSON 对象")
     except ValueError as exc:
         print(f"错误：参数不是 JSON 对象：{exc}")
+        sys.exit(1)
+    if not isinstance(args, dict):
+        print("错误：参数要是一个 JSON 对象")
         sys.exit(1)
     reject_unknown(args)
     # 整数结果已由 MAX_INT_BITS 限住（约 3 万位），用不着 Python 的 4300 位转换上限

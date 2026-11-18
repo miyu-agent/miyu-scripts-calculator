@@ -107,6 +107,15 @@ class Calc(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("sin(90) = 1", out)
 
+    # 审计 #176：顶层不是对象时报统一的一句，退出码 1、没有 traceback。
+    def test_non_object_args_friendly_error(self):
+        for args in ([], None):
+            with self.subTest(args=args):
+                code, out, _ = self.run_calc(args)
+                self.assertNotIn("Traceback", out)
+                self.assertEqual(code, 1, out)
+                self.assertIn("参数要是一个 JSON 对象", out)
+
 
 if __name__ == "__main__":
     unittest.main()
