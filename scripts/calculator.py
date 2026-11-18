@@ -4,7 +4,6 @@
 # Description: Evaluate arithmetic exactly: + - * / // % ^, trig, logs, roots, factorial, gcd, comb and more. Integers stay exact; no symbolic math.
 # 描述：算一个或几个算式：四则、乘方、三角、对数、开方、阶乘、组合数等，整数照精确值算，不做符号运算。
 # Timeout: 20
-# Need load: no
 # Clicall: yes
 # Parameters:
 # {"type": "object", "properties": {
